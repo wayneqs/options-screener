@@ -1,0 +1,75 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "strategy-screener"
+version = "0.1.0"
+description = "An options trading screener"
+authors = [{ name = "Wayne", email = "wayneqs@gmail.com" }]
+readme = "README.md"
+requires-python = ">=3.12"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "click>=8.0.0",
+    "rich>=13.0.0",
+    "pydantic>=2.0.0",
+    "yfinance>=0.2.61",
+    "pandas>=2.2.3",
+    "numpy>=2.2.6",
+    "requests>=2.32.3",
+    "dotenv>=0.9.9",
+    "ibapi>=9.81.1.post1",
+    "diskcache>=5.6.3",
+    "pandas-market-calendars>=5.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+]
+
+[project.scripts]
+strategy-screener = "strategy_screener.main:main"
+
+[project.urls]
+Homepage = "https://github.com/yourusername/strategy-screener"
+Repository = "https://github.com/yourusername/strategy-screener"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/strategy_screener"]
+
+[tool.black]
+line-length = 88
+target-version = ['py310']
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+
+[dependency-groups]
+dev = [
+    "black>=25.1.0",
+    "mypy>=1.15.0",
+    "pytest>=8.3.5",
+    "pytest-cov>=6.1.1",
+    "ruff>=0.11.11",
+]
