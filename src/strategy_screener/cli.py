@@ -32,9 +32,12 @@ def screen():
 
     assets = Assets("data/assets")
     md = assets.get_market_data()
-    names = icscreener.screen(md)
-    names.to_csv("output/iron-condors.csv", index=False)
-    console.print(f"📊 Found {len(names)} assets worth looking at")
+    
+    (icscreener
+        .screen(md)
+        .to_csv("output/iron-condors.csv", index=False))
+    
+    console.print(f"📊 Screening complete! Go and make some money.")
 
 @cli.command()
 def config_info():
