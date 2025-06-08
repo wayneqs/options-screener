@@ -13,7 +13,6 @@ console = Console()
 @click.version_option()
 @click.option('--debug/--no-debug', default=None, help='Enable debug mode')
 def cli(debug):
-    """Strategy Screener - A professional options trading CLI tool."""
     if debug is not None:
         config.debug = debug
     
