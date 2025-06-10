@@ -3,7 +3,7 @@ import click
 from rich.console import Console
 from .config import config
 from .utils.assets import Assets
-from .utils import icscreener
+from .utils import icscreener, cspscreener
 import pandas as pd
 from pathlib import Path
 
@@ -35,6 +35,9 @@ def screen():
     (icscreener
         .screen(md)
         .to_csv("output/iron-condors.csv", index=False))
+    (cspscreener
+        .screen(md)
+        .to_csv("output/cash-secured-puts.csv", index=False))
     
     console.print(f"📊 Screening complete! Go and make some money.")
 
