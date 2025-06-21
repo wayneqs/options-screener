@@ -1,83 +1,50 @@
 import pandas as pd
 import numpy as np
+import pandas_ta as ta
 from rich.console import Console
 
 console = Console()
 
-def calculate_bollinger_bands(df, window=20, num_std=2):
-    """Calculate Bollinger Bands."""
-    sma_key = 'SMA_'+str(window)
-    
-    sma = df['Close'].rolling(window=window).mean()
-    std = df['Close'].rolling(window=window).std()
+class Indicators:
+    """
+    A class to calculate various technical indicators for a stock.
+    """
 
-    indicators = {
-        sma_key: sma.squeeze(),  # Convert Series to DataFrame
-        'STD': std.squeeze(),  # Convert Series to DataFrame
-        'Upper Band': (sma + (std * num_std)).squeeze(),  # Convert Series to DataFrame
-        'Lower Band': (sma - (std * num_std)).squeeze()  # Convert Series to DataFrame
-    }
+    def __init__(self, market_data):
+        """
+        Initializes the Indicators instance with market data.
 
-    return pd.DataFrame(indicators)
+        :param market_data: A DataFrame containing the market data.
+        """
+        self.market_data = market_data
 
-def calculate_exponential_moving_average(df, windows=[20,50,200]):
-    """Calculate Exponential Moving Average."""
-    for window in windows:
-        df['EMA_'+str(window)] = df['Close'].ewm(span=window, adjust=False).mean()
-    return df
+    def calculate_indicators(self):
+        """
+        Calculates various technical indicators for the stock data.
+        :return: A DataFrame with the calculated indicators.
+        """
+        console.print("Calculating indicators...")
+        for ticker, data in self.market_data.items():
+            try:
+                self._calculate_indicators_for_ticker(data)
+            except Exception as e:
+                console.print(f"Error processing {ticker}: {e}")
+                continue
+        console.print("Indicators calculation complete.")
+        
+    def _calculate_indicators_for_ticker(self, data):
+        if isinstance(data.columns, pd.MultiIndex):
+            data.columns = data.columns.get_level_values(0)
 
-def calculate_relative_strength_index(df, period=14):
-    """Calculate Relative Strength Index (RSI)."""
-    delta = df['Close'].diff()
-    gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-    rs = gain / loss
-    df['RSI'] = 100 - (100 / (1 + rs))
-    return df
-
-def calculate_macd(df, short_window=12, long_window=26, signal_window=9):
-    """Calculate Moving Average Convergence Divergence (MACD)."""
-    df['EMA_short'] = df['Close'].ewm(span=short_window, adjust=False).mean()
-    df['EMA_long'] = df['Close'].ewm(span=long_window, adjust=False).mean()
-    df['MACD'] = df['EMA_short'] - df['EMA_long']
-    df['Signal Line'] = df['MACD'].ewm(span=signal_window, adjust=False).mean()
-    return df
-
-def calculate_average_true_range(df, period=14):
-    """Calculate Average True Range (ATR)."""
-    df['High-Low'] = df['High'] - df['Low']
-    df['High-Prev Close'] = abs(df['High'] - df['Close'].shift(1))
-    df['Low-Prev Close'] = abs(df['Low'] - df['Close'].shift(1))
-    true_range = df[['High-Low', 'High-Prev Close', 'Low-Prev Close']].max(axis=1)
-    df['ATR'] = true_range.rolling(window=period).mean()
-    return df
-
-def calculate_stochastic_oscillator(df, k_period=14, d_period=3):
-    """Calculate Stochastic Oscillator."""
-    low_min = df['Low'].rolling(window=k_period).min()
-    high_max = df['High'].rolling(window=k_period).max()
-    df['%K'] = 100 * ((df['Close'] - low_min) / (high_max - low_min))
-    df['%D'] = df['%K'].rolling(window=d_period).mean()
-    return df
-
-def calculate_on_balance_volume(df):
-    """Calculate On-Balance Volume (OBV)."""
-    df['OBV'] = 0
-    df['OBV'] = df['Volume'].where(df['Close'] > df['Close'].shift(1), -df['Volume']).cumsum()
-    return df
-
-def calculate_volume_weighted_average_price(df):
-    """Calculate Volume Weighted Average Price (VWAP)."""
-    df['Cumulative Volume'] = df['Volume'].cumsum()
-    df['Cumulative Price Volume'] = (df['Close'] * df['Volume']).cumsum()
-    df['VWAP'] = df['Cumulative Price Volume'] / df['Cumulative Volume']
-    return df
-
-def calculate_hv20(df):
-    """Calculate 20-day Historical Volatility."""
-    log_returns = np.log(df['Close'] / df['Close'].shift(1))
-    indicators = {
-        'HV20': (log_returns.fillna(0).rolling(window=20, min_periods=1).std() * np.sqrt(252)).squeeze()  # Annualized,
-    }
-
-    return pd.DataFrame(indicators)
+        data.ta.bbands(length=20, append=True)
+        data.ta.adx(length=14, append=True)
+        data.ta.sma(length=50, append=True)
+        data.ta.macd(append=True)
+        data.ta.rsi(append=True)
+        data['log_returns'] = np.log(data['Close'] / data['Close'].shift(1))
+        data['hv_20'] = data['log_returns'].rolling(window=20).std() * np.sqrt(252)
+        hv_window = 252
+        data['min_hv'] = data['hv_20'].rolling(window=hv_window, min_periods=1).min()
+        data['max_hv'] = data['hv_20'].rolling(window=hv_window, min_periods=1).max()
+        data['hv_rank'] = 100 * (data['hv_20'] - data['min_hv']) / (data['max_hv'] - data['min_hv'])
+        data['hv_rank'] = data['hv_rank'].fillna(50)

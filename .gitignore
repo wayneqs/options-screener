@@ -53,5 +53,5 @@ Thumbs.db
 .env.local
 .env.*.local
 
-data/cache
+src/data/cache/
 output/

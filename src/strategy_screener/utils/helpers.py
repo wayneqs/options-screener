@@ -78,6 +78,7 @@ def cached_outside_market_hours(key, ttl=43200):
     return decorator
 
 def cached(key, ttl=86400):
+    # 86400 seconds = 24 hours
     def decorator(func):
         def wrapper(*args, **kwargs):
             k = f"{key}-{'-'.join(map(str, args))}"

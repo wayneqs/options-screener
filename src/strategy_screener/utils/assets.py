@@ -1,59 +1,51 @@
 import yfinance as yf
-import json
-from pathlib import Path
-from typing import Dict, Any, Optional
-from rich.console import Console
-from rich.progress import track
-from .helpers import cached_outside_market_hours
-import pandas as pd
 
-console = Console()
+from strategy_screener.utils.helpers import cached, cached_outside_market_hours
 
 class Assets:
-    """Handle reading JSON files safely."""
-    
-    def __init__(self, base_path: Optional[str] = None):
-        """Initialize with optional base path."""
-        self.base_path = Path(base_path) if base_path else Path.cwd()
-    
-    def flatten_columns(self, df):
-        if isinstance(df.columns, pd.MultiIndex):
-            df.columns = ['_'.join(col).strip() for col in df.columns.values]
-        return df
+    """
+    A class to represent a collection of assets.
+    """
 
-    @cached_outside_market_hours("market_data")
-    def download_market_data(self, ticker: str, period: str ="3mo", interval: str ="1d") -> Dict[str, Any]:
-        """Download market data for a single ticker."""
-        data = yf.download(ticker, period=period, interval=interval)
-        #return self.flatten_columns(data)
+    def __init__(self, assets: list[str]):
+        """
+        Initializes the Assets instance with a list of asset names.
+
+        :param assets: A list of asset names.
+        """
+        self.assets = assets
+
+    def __str__(self):
+        return f"Assets({self.assets})"
+
+    def __repr__(self):
+        return self.__str__()
+    
+    @cached("ticker")
+    def download_asset(self, asset: str):
+        """
+        Downloads the data for a single asset from Yahoo Finance.
+
+        :param asset: The name of the asset to download.
+        :return: A DataFrame containing the asset's data.
+        """
+        try:
+            return yf.download(asset, period="300d", interval="1d")
+        except Exception as e:
+            print(f"Error downloading {asset}: {e}")
+            return None
+
+    @cached("market_data")
+    def download(self):
+        """
+        Downloads the asset data from Yahoo Finance.
+
+        :return: A dictionary with asset names as keys and their data as values.
+        """
+        data = {}
+        for asset in self.assets:
+            try:
+                data[asset] = yf.download(asset, period="300d", interval="1d")
+            except Exception as e:
+                print(f"Error downloading {asset}: {e}")
         return data
-
-    def get_market_data(self, tickers=None) -> Dict[str, Any]:
-        """Download market data for a list of tickers or all if None."""
-        if tickers is None:
-            # If no tickers provided, read from JSON files in the base path
-            file_paths = list(Path(self.base_path).glob("*.json"))
-            
-            tickers = []
-            for file_path in file_paths:
-                try:
-                    with open(file_path, 'r', encoding='utf-8') as file:
-                        data = json.load(file)
-                        if not isinstance(data, list):
-                            console.print(f"✗ Invalid data format in {file_path}: Expected a list")
-                            continue
-                        tickers.extend(data)
-                except FileNotFoundError:
-                    console.print(f"✗ File not found: {file_path}")
-                    continue
-                except json.JSONDecodeError as e:
-                    console.print(f"✗ Invalid JSON in {file_path}: {e}")
-                    continue
-                except Exception as e:
-                    console.print(f"✗ Error reading {file_path}: {e}")
-                    continue
-
-            return self.get_market_data(tickers)
-
-        else:
-            return {ticker: self.download_market_data(ticker) for ticker in track(tickers, description="Downloading market data...")}
